@@ -28,8 +28,20 @@
 
 <script>
 //import HelloWorld from './components/HelloWorld'
+import { Observable, Subject, BehaviorSubject } from 'rxjs'
 import axios from 'axios'
 
+const searchGithub = (q, page, perPage) => Observable.fromPromise(
+  axios.get('https://api.github.com/search/repositories', {
+    params: {
+      q,
+      page,
+      per_page: perPage
+    }
+}))
+.map((resp) => resp.data)
+
+/*
 const searchGithub = (q, page, perPage) =>
   axios.get('https://api.github.com/search/repositories', {
     params: {
@@ -39,7 +51,8 @@ const searchGithub = (q, page, perPage) =>
     }
 })
 .then((resp) => resp.data)
-//17.29
+*/
+
 
 export default {
 
@@ -47,32 +60,62 @@ export default {
   data () {
     return {
       q: '',
-      list: [],
-      total: 0,
-      topic: '',
       loading: false,
       page: 1,
       perPage: 10
     }
   },
+  subscriptions () {
+    /*
+    Observable.defer(() => {
+        //ถ้า loading อยู่ จะไปที่ never แทน ทำให้ api ไม่ถูก call ซ้ำ
+        if (this.loading) return Observable.never()
+        return Observable.of({ q: this.q, page: this.page, perPage: this.perPage })
+      })
+      51.03
+      */
+    const search$ = Observable.combineLatest(
+      this.$watchAsObservable('q').pluck('newValue'),
+      this.$watchAsObservable('page', { immediate: true }),
+      this.$watchAsObservable('perPage', { immediate: true }),
+    )
+        //แปลง  q, page, perPage จาก array ให้เป็น obj
+        .map(([q, page, perPage]) => ({  q, page, perPage }))
+        .do(() => { this.loading = true })
+        .flatMap(({ q, page, perPage }) =>
+          searchGithub(q, page, perPage),
+          ({ q, page, perPage }, data) => ({
+             q,
+             page,
+             perPage,
+             list: data.items,
+             total: data.total_count
+          }))
+        //ย้าย this.loading = false มาใน finally เพื่อให้ทำคำสั่งนี้ทุกกรณีไม่ว่า success or error
+        .finally(() => { this.loading = false })
+        .share()
+    return {
+      list: search$
+        .map((resp) => resp.list.map((x) => x.full_name)),
+      topic: search$
+        .map((resp) => resp.q),
+      total: search$
+        .map((resp) => resp.total),
+      totalPage: search$
+        .map((resp) => Math.ceil(resp.total / resp.perPage))
+        .startWith(0)
+    }
+  },
+  /*
   computed: {
     totalPage () {
       return Math.ceil(this.total / this.perPage)
     }
   },
+  */
   methods : {
     search () {
-      if (this.loading) return
-      this.loading = true
-      const q = this.q
-      searchGithub(q, this.page, this.perPage)
-      .then((data) => {
-        console.log(data)
-        this.topic = q
-        this.list = data.items.map((x) => x.full_name)
-        this.total = data.total_count
-        this.loading = false
-      })
+
     },
     startSearch (){
       this.page = 1
