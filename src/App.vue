@@ -74,10 +74,18 @@ export default {
       })
       51.03
       */
+
+    /*
+    Observable.of({a: 1, b: 2})
+      .map((x) => x.a)
+      .pluck('a')
+      2บรรทัดบน .map กับ .pluck ได้ผลลัพธ์เหมือนกัน
+    */
+
     const search$ = Observable.combineLatest(
       this.$watchAsObservable('q').pluck('newValue'),
-      this.$watchAsObservable('page', { immediate: true }),
-      this.$watchAsObservable('perPage', { immediate: true }),
+      this.$watchAsObservable('page', { immediate: true }).pluck('newValue'),
+      this.$watchAsObservable('perPage', { immediate: true }).pluck('newValue'),
     )
         //แปลง  q, page, perPage จาก array ให้เป็น obj
         .map(([q, page, perPage]) => ({  q, page, perPage }))
@@ -96,11 +104,15 @@ export default {
         .share()
     return {
       list: search$
-        .map((resp) => resp.list.map((x) => x.full_name)),
+        .pluck('list')
+        .map((list) => list.map((x) => x.full_name)),
+        //.map((resp) => resp.list.map((x) => x.full_name)),
       topic: search$
-        .map((resp) => resp.q),
+        .pluck('q'),
+        //.map((resp) => resp.q),
       total: search$
-        .map((resp) => resp.total),
+        .pluck('total'),
+        //.map((resp) => resp.total),
       totalPage: search$
         .map((resp) => Math.ceil(resp.total / resp.perPage))
         .startWith(0)
