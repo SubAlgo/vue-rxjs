@@ -2,8 +2,8 @@
   <div id="app">
     <img src="./assets/logo.png">
     <br>
-    <input v-model="q">
-    <button @click="q$.next(q)">Search</button>
+    <input ref="q">
+    <button v-stream:click="q$">Search</button>
     <div>
       <h1>{{ topic }} ( {{ page }} / {{ totalPage }} )</h1>
 
@@ -60,11 +60,10 @@ export default {
   name: 'app',
   data () {
     return {
-      q: '',
       loading: false
     }
   },
-  domStreams: ['prevClick$', 'nextClick$', 'perPage$'],
+  domStreams: ['q$', 'prevClick$', 'nextClick$', 'perPage$'],
   subscriptions () {
     /*
     Observable.defer(() => {
@@ -82,14 +81,15 @@ export default {
       2บรรทัดบน .map กับ .pluck ได้ผลลัพธ์เหมือนกัน
     */
 
-    this.q$ = new Subject()
-    this.page$ = new Subject()
+    const page$ = new Subject()
 
     const q$$ = this.q$
+      //.do(() => { console.dir() })
+      .map(() => this.refs.q.value)
       .do(() => { this.page$.next(1) })
 
     const page$$ = Observable.merge(
-      this.page$,
+      page$,
       this.prevClick$.map(() => this.page - 1),
       this.nextClick$.map(() => this.page + 1),
     )
