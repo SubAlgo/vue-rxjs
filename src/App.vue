@@ -82,13 +82,19 @@ export default {
       2บรรทัดบน .map กับ .pluck ได้ผลลัพธ์เหมือนกัน
     */
 
+    this.q$ = new Subject()
+
+
     const search$ = Observable.combineLatest(
-      this.$watchAsObservable('q').pluck('newValue'),
+      //this.$watchAsObservable('q').pluck('newValue'),
+      this.q$,
       this.$watchAsObservable('page', { immediate: true }).pluck('newValue'),
       this.$watchAsObservable('perPage', { immediate: true }).pluck('newValue'),
     )
+        .debounceTime(3)
         //แปลง  q, page, perPage จาก array ให้เป็น obj
         .map(([q, page, perPage]) => ({  q, page, perPage }))
+        .filter(() => !this.loading)
         .do(() => { this.loading = true })
         .flatMap(({ q, page, perPage }) =>
           searchGithub(q, page, perPage),
@@ -131,7 +137,8 @@ export default {
     },
     startSearch (){
       this.page = 1
-      this.search()
+      //this.q = this.inputQ
+      this.q$.next(this.q)
     },
     gotoPage (page) {
       if (page <= 0) return
