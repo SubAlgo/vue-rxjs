@@ -3,7 +3,7 @@
     <img src="./assets/logo.png">
     <br>
     <input v-model="q">
-    <button @click="search">Search</button>
+    <button @click="q$.next(q)">Search</button>
     <div>
       <h1>{{ topic }} ( {{ page }} / {{ totalPage }} )</h1>
 
@@ -61,8 +61,7 @@ export default {
   data () {
     return {
       q: '',
-      loading: false,
-      perPage: 10
+      loading: false
     }
   },
   domStreams: ['prevClick$', 'nextClick$', 'perPage$'],
@@ -86,6 +85,9 @@ export default {
     this.q$ = new Subject()
     this.page$ = new Subject()
 
+    const q$$ = this.q$
+      .do(() => { this.page$.next(1) })
+
     const page$$ = Observable.merge(
       this.page$,
       this.prevClick$.map(() => this.page - 1),
@@ -100,11 +102,8 @@ export default {
       .startWith(10)
 
     const search$ = Observable.combineLatest(
-      //this.$watchAsObservable('q').pluck('newValue'),
-      this.q$,
-      //this.$watchAsObservable('page', { immediate: true }).pluck('newValue'),
+      q$$,
       page$$,
-      //this.$watchAsObservable('perPage', { immediate: true }).pluck('newValue'),
       perPage$$
     )
         .debounceTime(1)
@@ -141,12 +140,6 @@ export default {
       page: search$
         .pluck('page')
         .startWith(1)
-    }
-  },
-  methods : {
-    search () {
-      this.page$.next(1)
-      this.q$.next(this.q)
     }
   }
 }
