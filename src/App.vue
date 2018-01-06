@@ -61,7 +61,6 @@ export default {
     return {
       q: '',
       loading: false,
-      page: 1,
       perPage: 10
     }
   },
@@ -83,12 +82,14 @@ export default {
     */
 
     this.q$ = new Subject()
+    this.page$ = new Subject()
 
 
     const search$ = Observable.combineLatest(
       //this.$watchAsObservable('q').pluck('newValue'),
       this.q$,
-      this.$watchAsObservable('page', { immediate: true }).pluck('newValue'),
+      //this.$watchAsObservable('page', { immediate: true }).pluck('newValue'),
+      this.page$.startWith(1),
       this.$watchAsObservable('perPage', { immediate: true }).pluck('newValue'),
     )
         .debounceTime(3)
@@ -121,7 +122,10 @@ export default {
         //.map((resp) => resp.total),
       totalPage: search$
         .map((resp) => Math.ceil(resp.total / resp.perPage))
-        .startWith(0)
+        .startWith(0),
+      page: search$
+        .pluck('page')
+        .startWith(1)
     }
   },
   /*
@@ -143,7 +147,7 @@ export default {
     gotoPage (page) {
       if (page <= 0) return
       if (page > this.totalPage) return
-      this.page = page
+      this.page$.next(page)
     }
 
   },
