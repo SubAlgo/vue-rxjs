@@ -148,11 +148,6 @@ export default {
     }
 
   },
-  watch: {
-    perPage () {
-      this.search()
-    }
-  }
 }
 </script>
 
