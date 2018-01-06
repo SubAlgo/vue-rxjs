@@ -100,7 +100,7 @@ export default {
              total: data.total_count
           }))
         //ย้าย this.loading = false มาใน finally เพื่อให้ทำคำสั่งนี้ทุกกรณีไม่ว่า success or error
-        .finally(() => { this.loading = false })
+        .do(() => { this.loading = false })
         .share()
     return {
       list: search$
