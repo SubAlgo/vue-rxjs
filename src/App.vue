@@ -3,19 +3,20 @@
     <img src="./assets/logo.png">
     <br>
     <input v-model="q">
-    <button @click="startSearch">Search</button>
+    <button @click="search">Search</button>
     <div>
       <h1>{{ topic }} ( {{ page }} / {{ totalPage }} )</h1>
 
-      <select v-model="perPage">
+      <select v-stream:change = "perPage$">
         <option :value="10">10</option>
         <option :value="15">15</option>
         <option :value="20">20</option>
       </select>
 
+
       <br>
-      <button @click="gotoPage(page-1)">Prev</button>
-      <button @click="gotoPage(page+1)">Next</button>
+      <button v-stream:click="prevClick$">Prev</button>
+      <button v-stream:click="nextClick$">Next</button>
 
       <h2 v-if="loading">Loading...</h2>
       <ul>
@@ -64,6 +65,7 @@ export default {
       perPage: 10
     }
   },
+  domStreams: ['prevClick$', 'nextClick$', 'perPage$'],
   subscriptions () {
     /*
     Observable.defer(() => {
@@ -84,15 +86,28 @@ export default {
     this.q$ = new Subject()
     this.page$ = new Subject()
 
+    const page$$ = Observable.merge(
+      this.page$,
+      this.prevClick$.map(() => this.page - 1),
+      this.nextClick$.map(() => this.page + 1),
+    )
+
+      .filter((page) => page > 0 && page <= this.totalPage)
+      .startWith(1)
+
+    const perPage$$ =  this.perPage$
+      .map((e) => e.event.target.value)
+      .startWith(10)
 
     const search$ = Observable.combineLatest(
       //this.$watchAsObservable('q').pluck('newValue'),
       this.q$,
       //this.$watchAsObservable('page', { immediate: true }).pluck('newValue'),
-      this.page$.startWith(1),
-      this.$watchAsObservable('perPage', { immediate: true }).pluck('newValue'),
+      page$$,
+      //this.$watchAsObservable('perPage', { immediate: true }).pluck('newValue'),
+      perPage$$
     )
-        .debounceTime(3)
+        .debounceTime(1)
         //แปลง  q, page, perPage จาก array ให้เป็น obj
         .map(([q, page, perPage]) => ({  q, page, perPage }))
         .filter(() => !this.loading)
@@ -128,29 +143,12 @@ export default {
         .startWith(1)
     }
   },
-  /*
-  computed: {
-    totalPage () {
-      return Math.ceil(this.total / this.perPage)
-    }
-  },
-  */
   methods : {
     search () {
-
-    },
-    startSearch (){
-      this.page = 1
-      //this.q = this.inputQ
+      this.page$.next(1)
       this.q$.next(this.q)
-    },
-    gotoPage (page) {
-      if (page <= 0) return
-      if (page > this.totalPage) return
-      this.page$.next(page)
     }
-
-  },
+  }
 }
 </script>
 
