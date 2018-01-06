@@ -144,7 +144,6 @@ export default {
       if (page <= 0) return
       if (page > this.totalPage) return
       this.page = page
-      this.search()
     }
 
   },
