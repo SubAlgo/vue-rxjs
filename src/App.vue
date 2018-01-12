@@ -42,51 +42,18 @@ const searchGithub = (q, page, perPage) => Observable.fromPromise(
 }))
 .map((resp) => resp.data)
 
-/*
-const searchGithub = (q, page, perPage) =>
-  axios.get('https://api.github.com/search/repositories', {
-    params: {
-      q,
-      page,
-      per_page: perPage
-    }
-})
-.then((resp) => resp.data)
-*/
-
-
 export default {
-
   name: 'app',
-  data () {
-    return {
-      loading: false
-    }
-  },
   domStreams: ['q$', 'prevClick$', 'nextClick$', 'perPage$'],
   subscriptions () {
-    /*
-    Observable.defer(() => {
-        //ถ้า loading อยู่ จะไปที่ never แทน ทำให้ api ไม่ถูก call ซ้ำ
-        if (this.loading) return Observable.never()
-        return Observable.of({ q: this.q, page: this.page, perPage: this.perPage })
-      })
-      51.03
-      */
-
-    /*
-    Observable.of({a: 1, b: 2})
-      .map((x) => x.a)
-      .pluck('a')
-      2บรรทัดบน .map กับ .pluck ได้ผลลัพธ์เหมือนกัน
-    */
 
     const page$ = new Subject()
+    const loading$ = new BehaviorSubject(false)
 
     const q$$ = this.q$
-      //.do(() => { console.dir() })
-      .map(() => this.refs.q.value)
-      .do(() => { this.page$.next(1) })
+      .map(() => this.$refs.q.value)
+      .do (() => {console.log} )
+      .do(() => { page$.next(1) })
 
     const page$$ = Observable.merge(
       page$,
@@ -109,8 +76,9 @@ export default {
         .debounceTime(1)
         //แปลง  q, page, perPage จาก array ให้เป็น obj
         .map(([q, page, perPage]) => ({  q, page, perPage }))
-        .filter(() => !this.loading)
-        .do(() => { this.loading = true })
+        .flatMap((x) => loading$.first(), (x, loading) => ({...x, loading}))
+        .filter(({ loading }) => !loading)
+        .do(() => { loading$.next(true) })
         .flatMap(({ q, page, perPage }) =>
           searchGithub(q, page, perPage),
           ({ q, page, perPage }, data) => ({
@@ -121,7 +89,7 @@ export default {
              total: data.total_count
           }))
         //ย้าย this.loading = false มาใน finally เพื่อให้ทำคำสั่งนี้ทุกกรณีไม่ว่า success or error
-        .do(() => { this.loading = false })
+        .do(() => { loading$.next(false) })
         .share()
     return {
       list: search$
@@ -139,7 +107,8 @@ export default {
         .startWith(0),
       page: search$
         .pluck('page')
-        .startWith(1)
+        .startWith(1),
+      loading: loading$
     }
   }
 }
